@@ -265,6 +265,10 @@ export default function App() {
             sendWs('vote', { participantName: displayParticipantName, points: pts });
           }}
           onReveal={() => sendWs('reveal')}
+          onRevote={() => {
+            setSelectedCard(null);
+            sendWs('revote');
+          }}
           onFinalize={(finalPoints) => sendWs('finalize', { finalPoints })}
         />
 
