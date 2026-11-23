@@ -1,0 +1,12 @@
+[
+  {
+    "title": "Đăng nhập bằng Google OAuth2",
+    "description": "Cho phép người dùng đăng nhập nhanh bằng tài khoản Google và tự động tạo hồ sơ.",
+    "acceptanceCriteria": "- Chuyển hướng tới trang xác thực Google\n- Lưu JWT token sau khi xác thực thành công"
+  },
+  {
+    "title": "Thống kê Velocity theo từng Sprint",
+    "description": "Vẽ biểu đồ cột hiển thị tổng Story Point hoàn thành qua 5 Sprint gần nhất.",
+    "acceptanceCriteria": "- Hiển thị đúng số điểm đã chốt\n- Cho phép lọc theo phòng họp"
+  }
+]

@@ -139,3 +139,4 @@ docker compose down
 
 # Dừng hệ thống và xóa luôn dữ liệu volume database (reset sạch DB)
 docker compose down -v
+

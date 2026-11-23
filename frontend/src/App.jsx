@@ -156,7 +156,12 @@ export default function App() {
       body: JSON.stringify(storyData),
     });
   };
-
+  const handleImportStories = async (storiesList) => {
+    await apiService.request(`/api/rooms/${roomCode}/stories/batch`, authUser.token, {
+      method: 'POST',
+      body: JSON.stringify(storiesList),
+    });
+  };
   const handleUpdateStory = async (storyId, storyData) => {
     await apiService.request(`/api/rooms/${roomCode}/stories/${storyId}`, authUser.token, {
       method: 'PUT',
@@ -266,6 +271,7 @@ export default function App() {
             sendWs('select-story', { storyId });
           }}
           onAddStory={handleAddStory}
+          onImportStories={handleImportStories}
           onUpdateStory={handleUpdateStory}
           onDeleteStory={handleDeleteStory}
         />

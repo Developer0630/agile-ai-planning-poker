@@ -105,4 +105,16 @@ public class RoomRestController {
         pokerRoomService.broadcastRoomState(roomCode);
         return saved;
     }
+    @PostMapping("/{roomCode}/stories/batch")
+    public java.util.List<UserStory> addStoriesBatch(@PathVariable String roomCode,
+                                                     @RequestBody java.util.List<UserStory> stories) {
+        for (UserStory st : stories) {
+            st.setRoomCode(roomCode);
+            st.setStatus("BACKLOG");
+            st.setFinalPoints(null);
+        }
+        java.util.List<UserStory> saved = storyRepository.saveAll(stories);
+        pokerRoomService.broadcastRoomState(roomCode);
+        return saved;
+    }
 }

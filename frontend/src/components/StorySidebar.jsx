@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { Layers, Plus, Play, Download, Pencil, Trash2, X } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { Layers, Plus, Play, Download, Upload, Pencil, Trash2, X } from 'lucide-react';
+import { parseBacklogFile } from '../utils/backlogParser';
 
 export default function StorySidebar({
   roomCode,
@@ -8,6 +9,7 @@ export default function StorySidebar({
   userRole,
   onSelectStory,
   onAddStory,
+  onImportStories,
   onUpdateStory,
   onDeleteStory,
 }) {
@@ -16,8 +18,10 @@ export default function StorySidebar({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [acceptanceCriteria, setAcceptanceCriteria] = useState('');
+  const fileInputRef = useRef(null);
 
-  const canManageBacklog = userRole === 'PRODUCT_OWNER' || userRole === 'SCRUM_MASTER';
+  const canManageBacklog =
+    userRole === 'PRODUCT_OWNER' || userRole === 'SCRUM_MASTER' || userRole === 'ADMIN';
 
   const totalSprintPoints = useMemo(() => {
     return stories.reduce((sum, st) => sum + (st.finalPoints || 0), 0);
@@ -67,6 +71,26 @@ export default function StorySidebar({
     resetForm();
   };
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsedStories = parseBacklogFile(file.name, text);
+      if (parsedStories.length === 0) {
+        alert('Không tìm thấy User Story hợp lệ nào trong file!');
+        return;
+      }
+      await onImportStories(parsedStories);
+      alert(`Đã nhập thành công ${parsedStories.length} User Story!`);
+    } catch (err) {
+      alert('Lỗi đọc file: ' + err.message);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const handleExportCsv = () => {
     if (stories.length === 0) return alert('Chưa có User Story nào để xuất!');
 
@@ -107,14 +131,33 @@ export default function StorySidebar({
         <div>
           <div className="flex items-center gap-2 font-semibold text-sm">
             <Layers className="w-4 h-4 text-indigo-400" />
-            <span>User Stories ({stories.length})</span>
+            <span>Stories ({stories.length})</span>
           </div>
           <p className="text-[11px] text-emerald-400 mt-0.5">
-            Tổng điểm đã chốt: <strong>{totalSprintPoints} SP</strong>
+            Đã chốt: <strong>{totalSprintPoints} SP</strong>
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
+          {canManageBacklog && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.json"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg cursor-pointer transition"
+                title="Nhập hàng loạt từ file CSV hoặc JSON"
+              >
+                <Upload className="w-4 h-4" />
+              </button>
+            </>
+          )}
+
           <button
             onClick={handleExportCsv}
             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg cursor-pointer transition"
@@ -122,6 +165,7 @@ export default function StorySidebar({
           >
             <Download className="w-4 h-4" />
           </button>
+
           {canManageBacklog && (
             <button
               onClick={() => (showForm ? resetForm() : openCreateForm())}
