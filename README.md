@@ -105,3 +105,37 @@ GET /health — Kiểm tra trạng thái hoạt động của mô hình.
 POST /api/v1/ai/estimate — Nhận { title, description, acceptance_criteria }, trả về { story_point, reasoning }.
 
 POST /api/v1/ai/discuss — Nhận { story, current_votes, chat_history }, trả về { reply, updated_point }.
+
+
+==================Khởi chạy nhanh bằng Docker Compose===========
+Yêu cầu: Máy đã cài đặt Docker và Docker Compose (Docker Desktop).
+
+Mở terminal tại thư mục gốc agile-poker-project/ (nơi chứa file docker-compose.yml).
+
+Build image và khởi chạy toàn bộ các container (mysql, backend, frontend):
+
+Bash
+docker compose up -d --build
+Kiểm tra trạng thái các container đang chạy:
+
+Bash
+docker compose ps
+Truy cập ứng dụng:
+
+Frontend (React): http://localhost:5173 (hoặc cổng được cấu hình trong docker-compose.yml)
+
+Backend API (Spring Boot): http://localhost:8080
+
+MySQL Database: localhost:3306
+
+Một số lệnh Docker hữu ích khác:
+
+Bash
+# Xem log của backend để theo dõi quá trình khởi động / gọi AI
+docker compose logs -f backend
+
+# Dừng toàn bộ hệ thống
+docker compose down
+
+# Dừng hệ thống và xóa luôn dữ liệu volume database (reset sạch DB)
+docker compose down -v
