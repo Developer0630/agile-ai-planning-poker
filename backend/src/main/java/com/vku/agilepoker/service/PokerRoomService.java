@@ -12,7 +12,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.vku.agilepoker.dto.PokerDtos.*;
 import com.vku.agilepoker.dto.PokerDtos.AiDiscussRequest;
 import com.vku.agilepoker.dto.PokerDtos.AiDiscussResponse;
 import com.vku.agilepoker.dto.PokerDtos.AiEstimateRequest;
@@ -172,6 +171,22 @@ public class PokerRoomService {
                 });
 
         broadcastRoomState(roomCode);
+    }
+    @Transactional
+    public void revoteCurrentStory(String roomCode) {
+        Room room = roomRepository.findByRoomCode(roomCode).orElseThrow();
+        Long storyId = room.getCurrentStoryId();
+        if (storyId == null) return;
+
+        UserStory story = storyRepository.findById(storyId).orElseThrow();
+        voteRepository.deleteByStoryId(storyId);
+        room.setStatus(Room.RoomStatus.VOTING);
+        roomRepository.save(room);
+
+        saveAndBroadcastChat(roomCode, storyId, "System", "SYSTEM",
+                "Phiên bỏ phiếu lại (Re-vote) đã bắt đầu! Mời cả nhóm & AI chọn lại lá bài.");
+        broadcastRoomState(roomCode);
+        triggerAiInitialVoteAsync(roomCode, story);
     }
 
     @Transactional

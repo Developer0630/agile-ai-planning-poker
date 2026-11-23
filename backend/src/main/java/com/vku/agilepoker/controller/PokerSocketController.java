@@ -6,7 +6,6 @@ import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.stereotype.Controller;
 
-import com.vku.agilepoker.dto.PokerDtos.*;
 import com.vku.agilepoker.dto.PokerDtos.ChatPayload;
 import com.vku.agilepoker.dto.PokerDtos.VotePayload;
 import com.vku.agilepoker.service.PokerRoomService;
@@ -43,5 +42,9 @@ public class PokerSocketController {
     @MessageMapping("/room/{roomCode}/chat")
     public void sendChat(@DestinationVariable String roomCode, ChatPayload payload) {
         pokerRoomService.handleChatMessage(roomCode, payload);
+    }
+    @MessageMapping("/room/{roomCode}/revote")
+    public void revote(@DestinationVariable String roomCode) {
+        pokerRoomService.revoteCurrentStory(roomCode);
     }
 }
