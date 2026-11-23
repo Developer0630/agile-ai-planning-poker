@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { Bot, Users, LogOut } from 'lucide-react';
+import { Bot, Users, LogOut, Copy, Check } from 'lucide-react';
 
 import { apiService } from './services/api';
 import AuthPage from './components/AuthPage';
@@ -18,6 +18,8 @@ export default function App() {
 
   const [roomCode, setRoomCode] = useState('');
   const [joined, setJoined] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [aiStatus, setAiStatus] = useState({ online: false, mode: 'CHECKING' });
 
   const [roomState, setRoomState] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -25,6 +27,32 @@ export default function App() {
   const [selectedCard, setSelectedCard] = useState(null);
 
   const stompClientRef = useRef(null);
+
+  // Lịch sử phòng theo từng tài khoản
+  const historyKey = authUser ? `agile_poker_rooms_${authUser.username}` : null;
+  const [recentRooms, setRecentRooms] = useState([]);
+
+  useEffect(() => {
+    if (!historyKey) return setRecentRooms([]);
+    const saved = localStorage.getItem(historyKey);
+    setRecentRooms(saved ? JSON.parse(saved) : []);
+  }, [historyKey]);
+
+  const saveRecentRoom = (code, name) => {
+    if (!historyKey) return;
+    setRecentRooms((prev) => {
+      const filtered = prev.filter((item) => item.code !== code);
+      const updated = [{ code, name: name || 'Sprint Planning' }, ...filtered].slice(0, 6);
+      localStorage.setItem(historyKey, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleClearHistory = () => {
+    if (!historyKey) return;
+    localStorage.removeItem(historyKey);
+    setRecentRooms([]);
+  };
 
   const displayParticipantName = authUser
     ? `${authUser.fullName} (${
@@ -40,6 +68,21 @@ export default function App() {
     setRoomState(null);
   };
 
+  const handleCopyRoomCode = () => {
+    navigator.clipboard.writeText(roomCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  // Kiểm tra trạng thái AI Service khi vào phòng
+  useEffect(() => {
+    if (!joined || !authUser) return;
+    apiService
+      .request('/api/rooms/ai-status', authUser.token)
+      .then(setAiStatus)
+      .catch(() => setAiStatus({ online: false, mode: 'MOCK_FALLBACK' }));
+  }, [joined, authUser]);
+
   // Kết nối WebSocket & tải dữ liệu phòng
   useEffect(() => {
     if (!joined || !roomCode || !authUser) return;
@@ -49,6 +92,7 @@ export default function App() {
       .then((data) => {
         setRoomState(data);
         setMessages(data.messages || []);
+        saveRecentRoom(roomCode, data.room?.name);
       })
       .catch((err) => {
         if (err.message === 'UNAUTHORIZED') return handleLogout();
@@ -96,7 +140,7 @@ export default function App() {
     try {
       const room = await apiService.request('/api/rooms', authUser.token, {
         method: 'POST',
-        body: JSON.stringify({ name: `Sprint Planning - ${authUser.fullName}` }),
+        body: JSON.stringify({ name: `Sprint - ${authUser.fullName}` }),
       });
       setRoomCode(room.roomCode);
       setJoined(true);
@@ -113,7 +157,6 @@ export default function App() {
     });
   };
 
-  // Điều hướng màn hình theo trạng thái
   if (!authUser) {
     return <AuthPage onAuthSuccess={setAuthUser} />;
   }
@@ -122,11 +165,13 @@ export default function App() {
     return (
       <LobbyPage
         authUser={authUser}
+        recentRooms={recentRooms}
         onCreateRoom={handleCreateRoom}
         onJoinRoom={(code) => {
           setRoomCode(code);
           setJoined(true);
         }}
+        onClearHistory={handleClearHistory}
         onLogout={handleLogout}
       />
     );
@@ -144,10 +189,38 @@ export default function App() {
         <div className="flex items-center gap-3">
           <Bot className="w-6 h-6 text-indigo-400" />
           <span className="font-bold text-lg">Agile AI Poker</span>
-          <span className="px-2.5 py-0.5 text-xs font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-md">
-            Mã phòng: {roomCode}
+
+          {/* Badge Mã phòng + Nút Copy nhanh */}
+          <button
+            onClick={handleCopyRoomCode}
+            className="px-2.5 py-1 text-xs font-mono bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-md flex items-center gap-1.5 cursor-pointer transition"
+            title="Bấm để sao chép mã phòng"
+          >
+            <span>Mã: {roomCode}</span>
+            {copiedCode ? (
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+          </button>
+
+          {/* Đèn báo trạng thái AI */}
+          <span
+            className={`px-2.5 py-0.5 text-[11px] rounded-full flex items-center gap-1.5 border ${
+              aiStatus.online
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+            }`}
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                aiStatus.online ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+              }`}
+            />
+            {aiStatus.online ? 'Llama-3 Live' : 'AI Mock Mode'}
           </span>
         </div>
+
         <div className="flex items-center gap-4 text-sm text-slate-300">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-emerald-400" />
@@ -171,6 +244,7 @@ export default function App() {
 
       <div className="flex-1 grid grid-cols-12 overflow-hidden">
         <StorySidebar
+          roomCode={roomCode}
           stories={stories}
           currentStory={currentStory}
           onSelectStory={(storyId) => {
@@ -185,6 +259,7 @@ export default function App() {
           votes={votes}
           isRevealed={isRevealed}
           selectedCard={selectedCard}
+          userRole={authUser.role}
           onVote={(pts) => {
             setSelectedCard(pts);
             sendWs('vote', { participantName: displayParticipantName, points: pts });
