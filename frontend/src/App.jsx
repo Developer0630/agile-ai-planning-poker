@@ -157,6 +157,19 @@ export default function App() {
     });
   };
 
+  const handleUpdateStory = async (storyId, storyData) => {
+    await apiService.request(`/api/rooms/${roomCode}/stories/${storyId}`, authUser.token, {
+      method: 'PUT',
+      body: JSON.stringify(storyData),
+    });
+  };
+
+  const handleDeleteStory = async (storyId) => {
+    await apiService.request(`/api/rooms/${roomCode}/stories/${storyId}`, authUser.token, {
+      method: 'DELETE',
+    });
+  };
+
   if (!authUser) {
     return <AuthPage onAuthSuccess={setAuthUser} />;
   }
@@ -247,11 +260,14 @@ export default function App() {
           roomCode={roomCode}
           stories={stories}
           currentStory={currentStory}
+          userRole={authUser.role}
           onSelectStory={(storyId) => {
             setSelectedCard(null);
             sendWs('select-story', { storyId });
           }}
           onAddStory={handleAddStory}
+          onUpdateStory={handleUpdateStory}
+          onDeleteStory={handleDeleteStory}
         />
 
         <PokerTable

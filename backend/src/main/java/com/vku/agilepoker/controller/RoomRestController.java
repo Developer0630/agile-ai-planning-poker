@@ -5,9 +5,11 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -63,7 +65,33 @@ public class RoomRestController {
 
         return saved;
     }
+    @PutMapping("/{roomCode}/stories/{storyId}")
+    public UserStory updateStory(@PathVariable String roomCode,
+                                 @PathVariable Long storyId,
+                                 @RequestBody UserStory updated) {
+        UserStory story = storyRepository.findById(storyId).orElseThrow();
+        story.setTitle(updated.getTitle());
+        story.setDescription(updated.getDescription());
+        story.setAcceptanceCriteria(updated.getAcceptanceCriteria());
+        UserStory saved = storyRepository.save(story);
+        pokerRoomService.broadcastRoomState(roomCode);
+        return saved;
+    }
 
+    @DeleteMapping("/{roomCode}/stories/{storyId}")
+    public Map<String, String> deleteStory(@PathVariable String roomCode,
+                                           @PathVariable Long storyId) {
+        roomRepository.findByRoomCode(roomCode).ifPresent(room -> {
+            if (storyId.equals(room.getCurrentStoryId())) {
+                room.setCurrentStoryId(null);
+                room.setStatus(Room.RoomStatus.WAITING);
+                roomRepository.save(room);
+            }
+        });
+        storyRepository.deleteById(storyId);
+        pokerRoomService.broadcastRoomState(roomCode);
+        return Map.of("status", "deleted");
+    }
     @GetMapping("/{roomCode}")
     public Map<String, Object> getRoomState(@PathVariable String roomCode) {
         return pokerRoomService.getRoomFullState(roomCode);
